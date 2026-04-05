@@ -1,0 +1,5 @@
+{
+  "name": "MK Network OTP Panel",
+  "description": "A web-based panel for managing virtual numbers and receiving OTPs via MK Network BD.",
+  "requestFramePermissions": []
+}
