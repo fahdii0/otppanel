@@ -38,8 +38,35 @@ interface ActiveNumber {
   startTime: number;
 }
 
+import { generateAppIcon } from "./services/iconGenerator";
+
 export default function App() {
   const [email, setEmail] = useState("fahdiikhann@gmail.com");
+  const [isGeneratingIcon, setIsGeneratingIcon] = useState(false);
+
+  const handleDownloadIcon = async () => {
+    setIsGeneratingIcon(true);
+    addLog("Generating high-resolution app icon...", "info");
+    try {
+      const iconUrl = await generateAppIcon();
+      if (iconUrl) {
+        const a = document.createElement('a');
+        a.href = iconUrl;
+        a.download = 'mknet-icon.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        addLog("App icon generated and downloaded", "success");
+      } else {
+        addLog("Failed to generate icon", "error");
+      }
+    } catch (err) {
+      addLog("Error generating icon", "error");
+    } finally {
+      setIsGeneratingIcon(false);
+    }
+  };
+
   const [password, setPassword] = useState("ALIKHAN12");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [phpSessId, setPhpSessId] = useState("");
@@ -953,6 +980,14 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-8">
+            <button
+              onClick={handleDownloadIcon}
+              disabled={isGeneratingIcon}
+              className="text-[11px] font-bold text-zinc-500 hover:text-emerald-400 uppercase tracking-widest flex items-center gap-2.5 transition-all group disabled:opacity-50"
+            >
+              <Download className={cn("w-4 h-4 group-hover:translate-y-0.5 transition-transform", isGeneratingIcon && "animate-bounce")} />
+              {isGeneratingIcon ? "Generating Icon..." : "Generate App Icon"}
+            </button>
             <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-[0.2em]">© 2026 MK Network BD. All rights reserved.</p>
           </div>
         </div>
