@@ -92,6 +92,17 @@ export default function App() {
     }
   }, [addLog]);
 
+  // Sound effects
+  const playSound = (type: 'acquire' | 'expire') => {
+    const sounds = {
+      acquire: "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3", // Notification/Success
+      expire: "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"   // Alert/Warning
+    };
+    const audio = new Audio(sounds[type]);
+    audio.volume = 0.4;
+    audio.play().catch(e => console.log("Audio play blocked by browser policy"));
+  };
+
   // Timer logic
   useEffect(() => {
     let timer: number;
@@ -99,6 +110,7 @@ export default function App() {
       timer = window.setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
+            playSound('expire');
             setActiveNumber(null);
             setIsPolling(false);
             localStorage.removeItem("activeNumber");
@@ -249,18 +261,19 @@ export default function App() {
         setServerOffset(serverTime - localTime);
       }
 
-      if (res.data.status === "success") {
-        const newActive = {
-          number: res.data.number,
-          range: res.data.range || targetRange,
-          startTime: Date.now()
-        };
-        setActiveNumber(newActive);
-        setTimeLeft(1200);
-        setIsPolling(true);
-        localStorage.setItem("activeNumber", JSON.stringify(newActive));
-        addLog(`Number acquired: ${res.data.number}`, "success");
-      } else {
+        if (res.data.status === "success") {
+          const newActive = {
+            number: res.data.number,
+            range: res.data.range || targetRange,
+            startTime: Date.now()
+          };
+          playSound('acquire');
+          setActiveNumber(newActive);
+          setTimeLeft(1200);
+          setIsPolling(true);
+          localStorage.setItem("activeNumber", JSON.stringify(newActive));
+          addLog(`Number acquired: ${res.data.number}`, "success");
+        } else {
         const errMsg = res.data.message || "No numbers available in this range.";
         setError(errMsg);
         addLog(`Failed to acquire number: ${errMsg}`, "error");
@@ -301,6 +314,7 @@ export default function App() {
             range: res.data.range || range,
             startTime: Date.now()
           };
+          playSound('acquire');
           setActiveNumber(newActive);
           setTimeLeft(1200);
           setIsPolling(true);
@@ -333,55 +347,47 @@ export default function App() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 font-mono selection:bg-emerald-500/30">
+      <div className="min-h-screen bg-[#030303] flex items-center justify-center p-4 font-sans selection:bg-emerald-500/30">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md bg-[#0a0a0a] border border-zinc-800 rounded-lg p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.1)] relative overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md glass-card p-8 relative overflow-hidden shadow-2xl"
         >
           {/* Decorative elements */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50" />
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl" />
           
           <div className="flex flex-col items-center mb-10 relative">
-            <div className="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center mb-6 shadow-inner group">
-              <ShieldCheck className="text-emerald-500 w-12 h-12 group-hover:scale-110 transition-transform" />
+            <div className="w-20 h-20 bg-zinc-900/50 border border-white/5 rounded-2xl flex items-center justify-center mb-6 shadow-xl group">
+              <ShieldCheck className="text-emerald-500 w-10 h-10 group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <h1 className="text-2xl font-black text-white tracking-[0.2em] uppercase">MK-NET OPS</h1>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">System Ready // Secure Link</p>
+            <h1 className="text-3xl font-display font-bold text-white tracking-tight">MK-NET OPS</h1>
+            <div className="flex items-center gap-2 mt-3">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest">Secure Terminal Access</p>
             </div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6 relative">
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Operator ID</label>
-                <span className="text-[8px] text-zinc-700 font-mono">REQ_EMAIL_AUTH</span>
-              </div>
-              <div className="relative group">
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-4 py-3.5 text-emerald-500 placeholder:text-zinc-700 focus:outline-none focus:border-emerald-500/50 focus:bg-zinc-900 transition-all text-sm"
-                  placeholder="operator@mknet.sys"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider ml-1">Operator ID</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3.5 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all text-sm"
+                placeholder="operator@mknet.sys"
+                required
+              />
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Access Key</label>
-                <span className="text-[8px] text-zinc-700 font-mono">SEC_ENCRYPT_AES</span>
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider ml-1">Access Key</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-4 py-3.5 text-emerald-500 placeholder:text-zinc-700 focus:outline-none focus:border-emerald-500/50 focus:bg-zinc-900 transition-all text-sm"
+                className="w-full bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3.5 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all text-sm"
                 placeholder="••••••••"
                 required
               />
@@ -391,20 +397,17 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-red-500/5 border border-red-500/20 rounded-md p-4 flex items-start gap-3 text-red-500 text-xs leading-relaxed"
+                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3 text-red-400 text-sm"
               >
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold uppercase block mb-1">Auth Error</span>
-                  {error}
-                </div>
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <p>{error}</p>
               </motion.div>
             )}
 
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-black font-black py-4 rounded-md shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-sm"
+              className="w-full btn-primary py-4 text-sm uppercase tracking-widest flex items-center justify-center gap-3"
             >
               {loading ? (
                 <>
@@ -420,9 +423,9 @@ export default function App() {
             </button>
           </form>
 
-          <div className="mt-10 pt-6 border-t border-zinc-900 flex justify-between items-center">
-            <span className="text-[8px] text-zinc-700 uppercase tracking-widest">v4.2.0-stable</span>
-            <div className="flex gap-4">
+          <div className="mt-10 pt-6 border-t border-white/5 flex justify-between items-center">
+            <span className="text-[10px] text-zinc-600 font-medium uppercase tracking-widest">v4.2.0-stable</span>
+            <div className="flex gap-1.5">
               <div className="w-1 h-1 bg-zinc-800 rounded-full" />
               <div className="w-1 h-1 bg-zinc-800 rounded-full" />
               <div className="w-1 h-1 bg-zinc-800 rounded-full" />
@@ -434,35 +437,35 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-400 font-mono selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-[#030303] text-zinc-400 font-sans selection:bg-emerald-500/30">
       {/* Top Status Bar */}
-      <header className="border-b border-zinc-900 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+      <header className="border-b border-white/5 bg-[#0a0a0a]/60 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-emerald-600 rounded flex items-center justify-center">
-                <ShieldCheck className="text-black w-4 h-4" />
+              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <ShieldCheck className="text-emerald-950 w-5 h-5" />
               </div>
-              <span className="font-black text-white tracking-widest text-sm">MK-NET // TERMINAL</span>
+              <span className="font-display font-bold text-white tracking-tight text-lg">MK-NET TERMINAL</span>
             </div>
-            <div className="h-4 w-px bg-zinc-800 hidden md:block" />
-            <div className="hidden md:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+            <div className="h-6 w-px bg-white/10 hidden md:block" />
+            <div className="hidden md:flex items-center gap-6 text-[11px] font-semibold uppercase tracking-[0.15em]">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 <span className="text-emerald-500">Uplink Active</span>
               </div>
-              <span className="text-zinc-600">Enc: AES-256</span>
+              <span className="text-zinc-500">AES-256 Encrypted</span>
             </div>
           </div>
           
           <div className="flex items-center gap-6">
-            <div className="hidden lg:flex items-center gap-3 bg-zinc-900/50 px-3 py-1.5 rounded border border-zinc-800">
-              <Smartphone className="w-3 h-3 text-zinc-500" />
-              <span className="text-[10px] text-zinc-400">{email}</span>
+            <div className="hidden lg:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
+              <Smartphone className="w-4 h-4 text-zinc-500" />
+              <span className="text-xs text-zinc-300 font-medium">{email}</span>
             </div>
             <button 
               onClick={handleLogout}
-              className="group flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-red-500 transition-colors"
+              className="group flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-red-400 transition-colors"
             >
               <span>Terminate</span>
               <LogOut className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -475,26 +478,26 @@ export default function App() {
         {/* Left Column: Main Controls */}
         <main className="lg:col-span-8 space-y-6">
           {/* Active Module */}
-          <section className="bg-[#0a0a0a] border border-zinc-800 rounded-lg overflow-hidden shadow-2xl relative">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-600" />
-            <div className="p-6 border-b border-zinc-900 flex items-center justify-between bg-zinc-900/20">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/10 rounded border border-emerald-500/20">
-                  <Smartphone className="w-5 h-5 text-emerald-500" />
+          <section className="glass-card overflow-hidden shadow-2xl relative">
+            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+            <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white/[0.02]">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                  <Smartphone className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-white uppercase tracking-widest">Signal Acquisition Module</h2>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Virtual SIM Interface // v2.4</p>
+                  <h2 className="text-base font-display font-bold text-white tracking-tight">Signal Acquisition</h2>
+                  <p className="text-[11px] text-zinc-500 font-semibold uppercase tracking-widest mt-0.5">Virtual SIM Interface // BD Region</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded px-2 py-1 gap-2">
-                  <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Range:</span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center bg-zinc-900/50 border border-white/5 rounded-xl px-3 py-2 gap-3">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Range:</span>
                   <input 
                     type="text"
                     value={manualRange}
                     onChange={(e) => setManualRange(e.target.value)}
-                    className="bg-transparent border-none text-[10px] text-emerald-500 font-bold focus:outline-none w-20 uppercase"
+                    className="bg-transparent border-none text-xs text-emerald-400 font-mono font-bold focus:outline-none w-20 uppercase"
                     placeholder="23276XXX"
                   />
                 </div>
@@ -502,10 +505,10 @@ export default function App() {
                   <button 
                     onClick={() => getNumber()}
                     disabled={loading}
-                    className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-black px-5 py-2 rounded font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-[0_0_15px_-5px_rgba(16,185,129,0.4)]"
+                    className="btn-primary flex items-center gap-2 text-xs uppercase tracking-widest"
                   >
-                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                    Acquire Signal
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    Acquire
                   </button>
                 )}
               </div>
@@ -520,41 +523,41 @@ export default function App() {
                     className="space-y-8"
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-zinc-900/30 border border-zinc-800 rounded-lg p-6 relative group">
-                        <div className="absolute top-2 right-2 flex gap-1">
-                          <div className="w-1 h-1 bg-emerald-500 rounded-full" />
-                          <div className="w-1 h-1 bg-emerald-500 rounded-full" />
+                      <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 relative group transition-all hover:bg-white/[0.05]">
+                        <div className="absolute top-4 right-4 flex gap-1.5">
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full opacity-50" />
                         </div>
-                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] block mb-3">Assigned Frequency</span>
-                        <div className="flex items-center justify-between">
-                          <span className="text-4xl font-black text-emerald-500 tracking-tighter tabular-nums">{activeNumber.number}</span>
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] block mb-4">Assigned Frequency</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-white tracking-tight tabular-nums break-all">{activeNumber.number}</span>
                           <button 
                             onClick={() => {
                               copyToClipboard(activeNumber.number);
                               addLog(`Copied number: ${activeNumber.number}`, "info");
                             }}
-                            className="p-2.5 hover:bg-emerald-500/10 text-zinc-500 hover:text-emerald-500 rounded border border-transparent hover:border-emerald-500/20 transition-all"
+                            className="p-3 bg-white/5 hover:bg-emerald-500/10 text-zinc-400 hover:text-emerald-500 rounded-xl border border-white/5 hover:border-emerald-500/20 transition-all shrink-0"
                           >
                             <Copy className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
 
-                      <div className="bg-zinc-900/30 border border-zinc-800 rounded-lg p-6 flex items-center gap-6">
-                        <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded flex items-center justify-center shrink-0 shadow-inner">
-                          <Clock className="text-emerald-500 w-7 h-7" />
+                      <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 flex items-center gap-6 transition-all hover:bg-white/[0.05]">
+                        <div className="w-16 h-16 bg-zinc-900/50 border border-white/5 rounded-2xl flex items-center justify-center shrink-0 shadow-xl">
+                          <Clock className="text-emerald-500 w-8 h-8" />
                         </div>
                         <div className="flex-1">
-                          <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] block mb-2">Signal TTL (20m Limit)</span>
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] block mb-3">Signal TTL</span>
                           <div className="flex items-end gap-2">
-                            <span className="text-3xl font-black text-white tabular-nums leading-none">{formatTime(timeLeft)}</span>
-                            <span className="text-[10px] text-zinc-500 font-bold mb-1">SEC</span>
+                            <span className="text-4xl font-display font-bold text-white tabular-nums leading-none">{formatTime(timeLeft)}</span>
+                            <span className="text-xs text-zinc-500 font-bold mb-1 uppercase tracking-widest">Rem</span>
                           </div>
-                          <div className="mt-3 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="mt-4 h-1.5 bg-white/5 rounded-full overflow-hidden">
                             <motion.div 
                               initial={{ width: "100%" }}
                               animate={{ width: `${(timeLeft / 1200) * 100}%` }}
-                              className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                              className="h-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.6)]"
                             />
                           </div>
                         </div>
@@ -562,32 +565,32 @@ export default function App() {
                     </div>
 
                     {/* Signal Content Area: OTP or Active Ranges */}
-                    <div className="bg-[#050505] rounded-lg p-8 border border-zinc-800 relative overflow-hidden min-h-[300px] flex flex-col">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                    <div className="bg-zinc-950/50 rounded-3xl p-10 border border-white/5 relative overflow-hidden min-h-[320px] flex flex-col shadow-inner">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] -mr-32 -mt-32" />
                       
                       <AnimatePresence mode="wait">
                         {otp ? (
                           <motion.div 
                             key="otp-display"
-                            initial={{ scale: 0.9, opacity: 0 }}
+                            initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
                             className="flex-1 flex flex-col items-center justify-center text-center"
                           >
-                            <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                              <CheckCircle2 className="w-10 h-10" />
+                            <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-emerald-500/20 shadow-[0_0_40px_rgba(16,185,129,0.15)]">
+                              <CheckCircle2 className="w-12 h-12" />
                             </div>
-                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] block mb-4">Decrypted OTP Payload</span>
+                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-[0.3em] block mb-6">Decrypted OTP Payload</span>
                             <div 
                               onClick={() => {
                                 copyToClipboard(otp);
                                 addLog(`Copied OTP: ${otp}`, "success");
                               }}
-                              className="flex items-center gap-6 bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 group cursor-pointer hover:bg-emerald-500/[0.03] hover:border-emerald-500/30 transition-all"
+                              className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 bg-white/[0.03] p-6 sm:p-8 rounded-3xl border border-white/10 group cursor-pointer hover:bg-emerald-500/[0.05] hover:border-emerald-500/40 transition-all shadow-2xl"
                             >
-                              <span className="text-7xl font-black text-white tracking-[-0.05em] tabular-nums drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">{otp}</span>
-                              <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-lg border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
-                                <Copy className="w-6 h-6" />
+                              <span className="text-5xl sm:text-6xl md:text-8xl font-display font-bold text-white tracking-tight tabular-nums drop-shadow-[0_0_20px_rgba(16,185,129,0.4)]">{otp}</span>
+                              <div className="p-3 sm:p-4 bg-emerald-500/10 text-emerald-500 rounded-2xl border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
+                                <Copy className="w-6 h-6 sm:w-8 h-8" />
                               </div>
                             </div>
                           </motion.div>
@@ -599,23 +602,23 @@ export default function App() {
                             exit={{ opacity: 0 }}
                             className="flex-1 flex flex-col items-center justify-center text-center"
                           >
-                            <div className="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
-                              <Smartphone className="text-zinc-700 w-8 h-8" />
+                            <div className="w-24 h-24 bg-zinc-900/50 border border-white/5 rounded-3xl flex items-center justify-center mb-8 shadow-2xl">
+                              <Loader2 className="text-emerald-500/40 w-10 h-10 animate-spin" />
                             </div>
-                            <h3 className="text-sm font-black text-white uppercase tracking-[0.3em] mb-2">OWNER Fahdii🤍</h3>
-                            <p className="text-zinc-500 text-[10px] uppercase tracking-widest max-w-xs leading-relaxed">System ready for signal acquisition. Initialize module to begin reception.</p>
+                            <h3 className="text-lg font-display font-bold text-white tracking-tight mb-3">OWNER Fahdii🤍</h3>
+                            <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest max-w-xs leading-relaxed opacity-60">Awaiting encrypted signal transmission from BD node...</p>
                           </motion.div>
                         )}
                       </AnimatePresence>
                       
-                      <div className="mt-8 pt-6 border-t border-zinc-800/50 flex items-center justify-between">
+                      <div className="mt-10 pt-8 border-t border-white/5 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <ShieldCheck className="w-4 h-4 text-emerald-500/40" />
-                          <span className="text-[9px] text-zinc-600 uppercase font-black tracking-widest">Active Signal Interception</span>
+                          <ShieldCheck className="w-5 h-5 text-emerald-500/30" />
+                          <span className="text-[11px] text-zinc-500 font-bold tracking-widest uppercase">Active Signal Interception</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                          <span className="text-[9px] text-zinc-700 font-black tracking-widest uppercase">OWNER: Fahdii🤍</span>
+                        <div className="flex items-center gap-2.5 bg-emerald-500/5 px-4 py-1.5 rounded-full border border-emerald-500/10">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                          <span className="text-[11px] text-emerald-500/80 font-bold tracking-widest uppercase">OWNER: Fahdii🤍</span>
                         </div>
                       </div>
                     </div>
@@ -624,17 +627,17 @@ export default function App() {
                       <button 
                         onClick={autoCycleNumber}
                         disabled={loading}
-                        className="flex-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-bold py-4 rounded transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-[10px]"
+                        className="flex-1 btn-secondary py-5 text-xs uppercase tracking-widest flex items-center justify-center gap-3"
                       >
-                        <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                        <RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} />
                         Auto Cycle
                       </button>
                       <button 
                         onClick={() => getNumber()}
                         disabled={loading}
-                        className="flex-1 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 font-bold py-4 rounded transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-[10px]"
+                        className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-500 font-bold py-5 rounded-xl transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-xs active:scale-95"
                       >
-                        <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                        <RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} />
                         Manual Range
                       </button>
                       <button 
@@ -644,19 +647,19 @@ export default function App() {
                           setIsPolling(false);
                           localStorage.removeItem("activeNumber");
                         }}
-                        className="px-8 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-500 font-bold py-4 rounded transition-all uppercase tracking-widest text-[10px]"
+                        className="px-10 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-500 font-bold py-5 rounded-xl transition-all uppercase tracking-widest text-xs active:scale-95"
                       >
                         Release
                       </button>
                     </div>
                   </motion.div>
                 ) : (
-                  <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-zinc-800 rounded-lg bg-zinc-900/10">
-                    <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
-                      <Smartphone className="text-zinc-700 w-8 h-8" />
+                  <div className="py-20 flex flex-col items-center justify-center text-center border-2 border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
+                    <div className="w-20 h-20 bg-zinc-900/50 border border-white/5 rounded-3xl flex items-center justify-center mb-8 shadow-2xl">
+                      <Smartphone className="text-zinc-700 w-10 h-10" />
                     </div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-[0.3em] mb-2">Module Idle</h3>
-                    <p className="text-zinc-500 text-[10px] uppercase tracking-widest max-w-xs leading-relaxed">System ready for signal acquisition. Initialize module to begin reception.</p>
+                    <h3 className="text-xl font-display font-bold text-white tracking-tight mb-3">Module Offline</h3>
+                    <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest max-w-xs leading-relaxed opacity-60">Initialize signal acquisition to begin virtual SIM interception.</p>
                   </div>
                 )}
               </AnimatePresence>
@@ -664,99 +667,99 @@ export default function App() {
           </section>
 
           {/* Signal Logs Table */}
-          <section className="bg-[#0a0a0a] border border-zinc-800 rounded-lg overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-zinc-900 flex items-center justify-between bg-zinc-900/20">
+          <section className="glass-card overflow-hidden shadow-2xl">
+            <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
               <div className="flex items-center gap-3">
-                <History className="w-4 h-4 text-emerald-500" />
-                <h2 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Signal History Log</h2>
+                <History className="w-5 h-5 text-emerald-500" />
+                <h2 className="text-sm font-display font-bold text-white tracking-tight">Signal History</h2>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded px-2 py-1 gap-2">
-                  <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Date:</span>
+                <div className="flex items-center bg-zinc-900/50 border border-white/5 rounded-xl px-3 py-1.5 gap-3">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Date:</span>
                   <input 
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="bg-transparent border-none text-[10px] text-emerald-500 font-bold focus:outline-none uppercase"
+                    className="bg-transparent border-none text-xs text-emerald-400 font-mono font-bold focus:outline-none uppercase"
                   />
                 </div>
-              <div className="flex items-center gap-4">
-                {history.length > 0 && (
-                  <button
-                    onClick={() => {
-                      const content = history.map(h => 
-                        `Number: ${h.phone_number}\nOTP: ${h.otps || 'Pending'}\nCreated: ${h.created_at}\n-------------------`
-                      ).join('\n\n');
-                      const blob = new Blob([content], { type: 'text/plain' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `sms_history_${new Date().toISOString().split('T')[0]}.txt`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      addLog("History downloaded as .txt file", "success");
-                    }}
-                    className="text-[9px] font-black text-zinc-500 hover:text-emerald-500 uppercase tracking-widest flex items-center gap-2 transition-colors"
-                  >
-                    <Download className="w-3 h-3" />
-                    Download History
-                  </button>
-                )}
-                <button 
-                  onClick={async () => {
-                  setLoading(true);
-                  addLog("Refreshing history log...", "info");
-                  try {
-                    const res = await axios.get("/api/get-history", { 
-                      params: { phpSessId, limit: 50, date: selectedDate } 
-                    });
-                    
-                    // Sync server time offset
-                    const serverDateHeader = res.headers['x-server-date'] || res.headers.date;
-                    if (serverDateHeader) {
-                      const serverTime = new Date(serverDateHeader).getTime();
-                      const localTime = Date.now();
-                      setServerOffset(serverTime - localTime);
-                    }
+                <div className="flex items-center gap-3">
+                  {history.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const content = history.map(h => 
+                          `Number: ${h.phone_number}\nOTP: ${h.otps || 'Pending'}\nCreated: ${h.created_at}\n-------------------`
+                        ).join('\n\n');
+                        const blob = new Blob([content], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `sms_history_${new Date().toISOString().split('T')[0]}.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        addLog("History downloaded as .txt file", "success");
+                      }}
+                      className="p-2 bg-white/5 hover:bg-emerald-500/10 text-zinc-400 hover:text-emerald-500 rounded-lg border border-white/5 hover:border-emerald-500/20 transition-all"
+                      title="Download History"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button 
+                    onClick={async () => {
+                      setLoading(true);
+                      addLog("Refreshing history log...", "info");
+                      try {
+                        const res = await axios.get("/api/get-history", { 
+                          params: { phpSessId, limit: 50, date: selectedDate } 
+                        });
+                        
+                        // Sync server time offset
+                        const serverDateHeader = res.headers['x-server-date'] || res.headers.date;
+                        if (serverDateHeader) {
+                          const serverTime = new Date(serverDateHeader).getTime();
+                          const localTime = Date.now();
+                          setServerOffset(serverTime - localTime);
+                        }
 
-                    if (res.data.status === "success") {
-                      setHistory(res.data.data);
-                      addLog("History log updated", "success");
-                    }
-                  } finally { setLoading(false); }
-                }}
-                className="text-[9px] font-black text-zinc-500 hover:text-emerald-500 uppercase tracking-widest flex items-center gap-2 transition-colors"
-              >
-                <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
-                Sync
-              </button>
+                        if (res.data.status === "success") {
+                          setHistory(res.data.data);
+                          addLog("History log updated", "success");
+                        }
+                      } finally { setLoading(false); }
+                    }}
+                    className="btn-secondary py-2 px-4 text-[10px] uppercase tracking-widest flex items-center gap-2"
+                  >
+                    <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+                    Sync
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
             {/* Signal Summary Card */}
-            <div className="p-6 bg-zinc-900/10 border-b border-zinc-900">
-              <div className="bg-zinc-900/30 border border-zinc-800 p-4 rounded-lg flex items-center justify-between">
+            <div className="p-6 bg-white/[0.01] border-b border-white/5">
+              <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-2xl flex items-center justify-between shadow-inner">
                 <div>
-                  <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Last Signal Status</span>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Last Signal Status</span>
                   {history.length > 0 ? (
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-white tabular-nums">{history[0].phone_number}</span>
-                      <span className={cn("text-[8px] font-black uppercase px-1.5 py-0.5 rounded border", 
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-display font-bold text-white tabular-nums">{history[0].phone_number}</span>
+                      <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border", 
                         getStatus(history[0].created_at).label === "Active" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-500"
                       )}>
                         {getStatus(history[0].created_at).label}
                       </span>
                     </div>
                   ) : (
-                    <p className="text-[10px] text-zinc-700 uppercase font-black tracking-widest">No Signal</p>
+                    <p className="text-xs text-zinc-600 font-medium uppercase tracking-widest">No Signals Captured</p>
                   )}
                 </div>
                 <div className="text-right">
-                  <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest block mb-1">OWNER</span>
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Fahdii🤍</p>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Operator</span>
+                  <p className="text-xs font-display font-bold text-zinc-300 tracking-tight">Fahdii🤍</p>
                 </div>
               </div>
             </div>
@@ -764,84 +767,84 @@ export default function App() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-zinc-900/50 text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] border-b border-zinc-900">
-                    <th className="px-6 py-4">Frequency</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Payload</th>
-                    <th className="px-6 py-4">Raw Data</th>
-                    <th className="px-6 py-4 text-right">Timestamp</th>
+                  <tr className="bg-white/[0.02] text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] border-b border-white/5">
+                    <th className="px-6 py-5">Frequency</th>
+                    <th className="px-6 py-5">Status</th>
+                    <th className="px-6 py-5">Payload</th>
+                    <th className="px-6 py-5">Raw Data</th>
+                    <th className="px-6 py-5 text-right">Timestamp</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-900">
+                <tbody className="divide-y divide-white/5">
                   {history.length > 0 ? (
                     history.map((item, idx) => {
                       const status = getStatus(item.created_at);
                       return (
-                        <tr key={idx} className="hover:bg-emerald-500/[0.02] transition-colors group">
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col gap-1">
+                        <tr key={idx} className="hover:bg-white/[0.02] transition-colors group">
+                          <td className="px-6 py-5">
+                            <div className="flex flex-col gap-1.5">
                               <div className="flex items-center gap-2">
-                                <span className={cn("text-[7px] font-black uppercase px-1 rounded border", 
+                                <span className={cn("text-[8px] font-bold uppercase px-1.5 rounded border", 
                                   status.label === "Active" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-500"
                                 )}>
                                   {status.label}
                                 </span>
                                 {status.time && (
-                                  <span className="text-[7px] text-zinc-600 font-mono tabular-nums">{status.time}</span>
+                                  <span className="text-[9px] text-zinc-500 font-mono tabular-nums">{status.time}</span>
                                 )}
                               </div>
                               <div className="flex items-center gap-3">
-                                <span className="font-black text-zinc-300 text-xs tabular-nums">{item.phone_number}</span>
+                                <span className="font-display font-bold text-zinc-200 text-sm tabular-nums tracking-tight">{item.phone_number}</span>
                                 <button 
                                   onClick={() => copyToClipboard(item.phone_number)}
-                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-800 rounded text-zinc-600 hover:text-emerald-500 transition-all"
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-emerald-500 transition-all"
                                 >
-                                  <Copy className="w-3 h-3" />
+                                  <Copy className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className={cn("text-[9px] font-black uppercase tracking-widest", status.color)}>
+                          <td className="px-6 py-5">
+                            <div className="flex flex-col gap-1">
+                              <span className={cn("text-[10px] font-bold uppercase tracking-widest", status.color)}>
                                 {status.label}
                               </span>
                               {status.time && (
-                                <span className="text-[8px] text-zinc-600 font-mono tabular-nums">
+                                <span className="text-[9px] text-zinc-600 font-mono tabular-nums">
                                   EXP: {status.time}
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-5">
                             {item.otps && item.otps !== "null" ? (
                               <button 
                                 onClick={() => {
                                   copyToClipboard(item.otps);
                                   addLog(`Copied OTP from history: ${item.otps}`, "success");
                                 }}
-                                className="bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded text-[10px] font-black border border-emerald-500/20 tabular-nums hover:bg-emerald-500/20 transition-all cursor-pointer"
+                                className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/20 tabular-nums hover:bg-emerald-500/20 transition-all cursor-pointer shadow-lg shadow-emerald-500/5"
                               >
                                 {item.otps}
                               </button>
                             ) : (
-                              <span className="text-zinc-700 text-[10px] uppercase font-bold tracking-widest">Empty</span>
+                              <span className="text-zinc-700 text-[10px] uppercase font-bold tracking-widest opacity-40">Empty</span>
                             )}
                           </td>
-                          <td className="px-6 py-4">
-                            <p className="text-[10px] text-zinc-500 max-w-[200px] truncate font-medium" title={item.full_sms_list}>
+                          <td className="px-6 py-5">
+                            <p className="text-xs text-zinc-500 max-w-[200px] truncate font-medium opacity-80" title={item.full_sms_list}>
                               {item.full_sms_list || "---"}
                             </p>
                           </td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="text-[10px] text-zinc-700 font-bold tabular-nums">{item.created_at}</span>
+                          <td className="px-6 py-5 text-right">
+                            <span className="text-[10px] text-zinc-600 font-bold tabular-nums tracking-tight">{item.created_at}</span>
                           </td>
                         </tr>
                       );
                     })
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-zinc-700 text-[10px] uppercase font-black tracking-[0.3em]">
+                      <td colSpan={5} className="px-6 py-20 text-center text-zinc-700 text-xs uppercase font-bold tracking-[0.3em] opacity-40">
                         No records found in buffer
                       </td>
                     </tr>
@@ -855,39 +858,39 @@ export default function App() {
         {/* Right Column: System Console & Diagnostics */}
         <aside className="lg:col-span-4 space-y-6">
           {/* System Console */}
-          <section className="bg-[#0a0a0a] border border-zinc-800 rounded-lg overflow-hidden shadow-2xl flex flex-col h-[500px]">
-            <div className="p-4 border-b border-zinc-900 bg-zinc-900/20 flex items-center justify-between">
+          <section className="glass-card overflow-hidden shadow-2xl flex flex-col h-[500px]">
+            <div className="p-5 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <h2 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">System Console</h2>
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <h2 className="text-xs font-display font-bold text-white tracking-tight uppercase">System Console</h2>
               </div>
-              <span className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest">Live Stream</span>
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest opacity-60">Live Stream</span>
             </div>
-            <div className="flex-1 p-4 overflow-y-auto font-mono text-[10px] space-y-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+            <div className="flex-1 p-5 overflow-y-auto font-mono text-[11px] space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
               {logs.map((log, i) => (
-                <div key={i} className="flex gap-3 leading-relaxed group">
-                  <span className="text-zinc-700 shrink-0">[{log.time}]</span>
+                <div key={i} className="flex gap-3 leading-relaxed group animate-in fade-in slide-in-from-left-2 duration-300">
+                  <span className="text-zinc-600 shrink-0 font-medium">[{log.time}]</span>
                   <span className={cn(
                     "flex-1",
-                    log.type === 'error' && "text-red-500",
-                    log.type === 'success' && "text-emerald-500",
-                    log.type === 'warn' && "text-yellow-500",
+                    log.type === 'error' && "text-red-400",
+                    log.type === 'success' && "text-emerald-400",
+                    log.type === 'warn' && "text-yellow-400",
                     log.type === 'info' && "text-zinc-400"
                   )}>
-                    <span className="font-bold mr-2">{log.type.toUpperCase()}:</span>
-                    {log.msg}
+                    <span className="font-bold mr-2 opacity-80">{log.type.toUpperCase()}:</span>
+                    <span className="opacity-90">{log.msg}</span>
                   </span>
                 </div>
               ))}
               {logs.length === 0 && (
-                <div className="text-zinc-800 italic">Console initialized. Awaiting system events...</div>
+                <div className="text-zinc-700 italic opacity-40">Console initialized. Awaiting system events...</div>
               )}
             </div>
-            <div className="p-3 border-t border-zinc-900 bg-zinc-900/10 flex justify-between items-center">
-              <span className="text-[8px] text-zinc-700 uppercase tracking-widest">Kernel: v4.2.0-mknet</span>
+            <div className="p-4 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
+              <span className="text-[10px] text-zinc-600 font-medium uppercase tracking-widest">Kernel: v4.2.0-mknet</span>
               <button 
                 onClick={() => setLogs([])}
-                className="text-[8px] text-zinc-600 hover:text-zinc-400 uppercase tracking-widest font-bold"
+                className="text-[10px] text-zinc-500 hover:text-zinc-300 uppercase tracking-widest font-bold transition-colors"
               >
                 Clear Buffer
               </button>
@@ -895,42 +898,42 @@ export default function App() {
           </section>
 
           {/* System Diagnostics */}
-          <section className="bg-[#0a0a0a] border border-zinc-800 rounded-lg p-6 shadow-2xl space-y-6">
-            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" />
+          <section className="glass-card p-6 shadow-2xl space-y-8">
+            <h3 className="text-xs font-display font-bold text-white uppercase tracking-widest flex items-center gap-3">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
               Diagnostics
             </h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-[9px] uppercase font-black tracking-widest">
-                  <span className="text-zinc-600">CPU Load</span>
-                  <span className="text-emerald-500">12.4%</span>
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex justify-between text-[11px] uppercase font-bold tracking-widest">
+                  <span className="text-zinc-500">CPU Load</span>
+                  <span className="text-emerald-400">12.4%</span>
                 </div>
-                <div className="h-1 bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 w-[12.4%] shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-[9px] uppercase font-black tracking-widest">
-                  <span className="text-zinc-600">Memory Usage</span>
-                  <span className="text-emerald-500">442MB</span>
-                </div>
-                <div className="h-1 bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 w-[35%] shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 w-[12.4%] shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
                 </div>
               </div>
-              <div className="pt-4 space-y-3">
-                <div className="flex items-center justify-between text-[9px] uppercase font-black tracking-widest">
-                  <span className="text-zinc-600">Network Latency</span>
-                  <span className="text-emerald-500">24ms</span>
+              <div className="space-y-3">
+                <div className="flex justify-between text-[11px] uppercase font-bold tracking-widest">
+                  <span className="text-zinc-500">Memory Usage</span>
+                  <span className="text-emerald-400">442MB</span>
                 </div>
-                <div className="flex items-center justify-between text-[9px] uppercase font-black tracking-widest">
-                  <span className="text-zinc-600">Session Integrity</span>
-                  <span className="text-emerald-500">Verified</span>
+                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 w-[35%] shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
                 </div>
-                <div className="flex items-center justify-between text-[9px] uppercase font-black tracking-widest">
-                  <span className="text-zinc-600">Uptime</span>
-                  <span className="text-zinc-400">04:22:18</span>
+              </div>
+              <div className="pt-6 border-t border-white/5 space-y-4">
+                <div className="flex items-center justify-between text-[11px] uppercase font-bold tracking-widest">
+                  <span className="text-zinc-500">Network Latency</span>
+                  <span className="text-emerald-400">24ms</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] uppercase font-bold tracking-widest">
+                  <span className="text-zinc-500">Session Integrity</span>
+                  <span className="text-emerald-400">Verified</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] uppercase font-bold tracking-widest">
+                  <span className="text-zinc-500">Uptime</span>
+                  <span className="text-zinc-300">04:22:18</span>
                 </div>
               </div>
             </div>
@@ -938,43 +941,19 @@ export default function App() {
         </aside>
       </div>
 
-      <footer className="max-w-[1400px] mx-auto px-6 py-10 border-t border-zinc-900 mt-10">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-zinc-900 border border-zinc-800 rounded flex items-center justify-center">
-              <ShieldCheck className="text-zinc-700 w-5 h-5" />
+      <footer className="max-w-[1400px] mx-auto px-6 py-12 border-t border-white/5 mt-12">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex items-center gap-5">
+            <div className="w-10 h-10 bg-zinc-900/50 border border-white/5 rounded-xl flex items-center justify-center shadow-xl">
+              <ShieldCheck className="text-zinc-600 w-6 h-6" />
             </div>
             <div>
-              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] block">MK-NET OPS TERMINAL</span>
-              <span className="text-[8px] text-zinc-800 uppercase tracking-widest">Secure Virtual Infrastructure // BD Region</span>
+              <span className="text-xs font-display font-bold text-zinc-400 uppercase tracking-[0.4em] block">MK-NET OPS TERMINAL</span>
+              <span className="text-[10px] text-zinc-600 font-medium uppercase tracking-widest mt-1 block">Secure Virtual Infrastructure // BD Region</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch('/src/App.tsx');
-                  const text = await response.text();
-                  const blob = new Blob([text], { type: 'text/plain' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'App.tsx';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                  addLog("Source code (App.tsx) downloaded", "success");
-                } catch (err) {
-                  addLog("Failed to download source code", "error");
-                }
-              }}
-              className="text-[9px] font-black text-zinc-600 hover:text-emerald-500 uppercase tracking-widest flex items-center gap-2 transition-colors"
-            >
-              <Download className="w-3 h-3" />
-              Download App.tsx
-            </button>
-            <p className="text-[9px] text-zinc-800 font-bold uppercase tracking-[0.2em]">© 2026 MK Network BD. All rights reserved.</p>
+          <div className="flex items-center gap-8">
+            <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-[0.2em]">© 2026 MK Network BD. All rights reserved.</p>
           </div>
         </div>
       </footer>
